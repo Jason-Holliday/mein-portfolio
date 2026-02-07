@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 *,
 *::before,
@@ -15,5 +13,5 @@ html {
 }
 
 body {
-  @apply font-mont;
+  font-family: 'Montserrat', sans-serif;
 }
