@@ -21,64 +21,67 @@ app.use(
   cors({
     origin: [
       process.env.FRONTEND_URL,
-      'https://www.jasonholliday.dev',
-      'https://jasonholliday.dev',
-      'http://localhost:5173'
+      "https://www.jasonholliday.dev",
+      "https://jasonholliday.dev",
+      "http://localhost:5173",
     ].filter(Boolean),
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
-// === BETTER AUTH ROUTES ===
+// =======================================================
+// 🔐 BETTER AUTH (Coolify-sicher, ohne Wildcard)
+// =======================================================
 app.use("/api/auth", async (req, res) => {
   try {
-    const baseURL = process.env.BETTER_AUTH_URL || `http://localhost:${PORT}`;
-    const url = new URL(req.originalUrl || req.url, baseURL);
-    
+    const baseURL =
+      process.env.BETTER_AUTH_URL || `http://localhost:${PORT}`;
+
+    const url = new URL(req.originalUrl, baseURL);
+
     const headers = new Headers();
     Object.entries(req.headers).forEach(([key, value]) => {
       if (value) headers.set(key, Array.isArray(value) ? value[0] : value);
     });
 
-    // Body nur bei POST/PUT/PATCH
-    let body = undefined;
-    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+    let body;
+    if (["POST", "PUT", "PATCH"].includes(req.method) && req.body) {
       body = JSON.stringify(req.body);
-      headers.set('content-type', 'application/json');
+      headers.set("content-type", "application/json");
     }
 
     const webRequest = new Request(url, {
       method: req.method,
-      headers: headers,
-      body: body,
+      headers,
+      body,
     });
 
     const webResponse = await auth.handler(webRequest);
+
     res.status(webResponse.status);
-    
+
     webResponse.headers.forEach((value, key) => {
       res.setHeader(key, value);
     });
-    
+
     const responseBody = await webResponse.text();
-    
+
     try {
-      const jsonBody = JSON.parse(responseBody);
-      res.json(jsonBody);
+      res.json(JSON.parse(responseBody));
     } catch {
       res.send(responseBody);
     }
   } catch (error) {
     console.error("❌ Better Auth Fehler:", error);
-    res.status(500).json({ 
-      error: "Authentifizierungsfehler",
-      message: process.env.NODE_ENV === "development" ? error.message : undefined
-    });
+    res.status(500).json({ error: "Authentifizierungsfehler" });
   }
 });
-// === SESSION ENDPOINT ===
+
+// =======================================================
+// 👤 SESSION ENDPOINT
+// =======================================================
 app.get("/api/me", async (req, res) => {
   try {
     const session = await auth.api.getSession({
@@ -96,28 +99,46 @@ app.get("/api/me", async (req, res) => {
   }
 });
 
-// === API ROUTES ===
+// =======================================================
+// 📦 API ROUTES
+// =======================================================
 app.use("/api/projects", projectsRoutes);
 app.use("/api", contactRoutes);
 
-// === HEALTH CHECK ===
+// =======================================================
+// 💚 HEALTH CHECK
+// =======================================================
 app.get("/api/health", (req, res) => {
-  res.json({ 
-    status: "ok", 
+  res.json({
+    status: "ok",
     message: "Backend läuft",
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
   });
 });
 
-// === 404 HANDLER ===
-app.use((req, res, next) => {
-  res.status(404).json({ 
+// =======================================================
+// 🚫 API 404 (NUR für /api)
+// =======================================================
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    error: "API Route nicht gefunden",
+    path: req.path,
+  });
+});
+
+// =======================================================
+// 🌍 GLOBAL 404 (optional, aber sauber)
+// =======================================================
+app.use((req, res) => {
+  res.status(404).json({
     error: "Route nicht gefunden",
-    path: req.path 
+    path: req.path,
   });
 });
 
-// === GLOBAL ERROR HANDLER ===
+// =======================================================
+// 💥 GLOBAL ERROR HANDLER
+// =======================================================
 app.use((err, req, res, next) => {
   console.error("❌ Server Error:", err);
   res.status(err.status || 500).json({
@@ -126,28 +147,34 @@ app.use((err, req, res, next) => {
   });
 });
 
-// === SERVER START ===
+// =======================================================
+// 🚀 SERVER START
+// =======================================================
 const startServer = async () => {
   try {
-    // SICHERHEITSCHECK
     if (!process.env.MONGO_URI) {
       throw new Error("❌ MONGO_URI fehlt in der .env Datei");
     }
+
     if (!process.env.BETTER_AUTH_SECRET) {
-      console.warn("⚠️  BETTER_AUTH_SECRET nicht gesetzt - verwende einen sicheren Wert in Production!");
+      console.warn(
+        "⚠️  BETTER_AUTH_SECRET nicht gesetzt – bitte in Production setzen!"
+      );
     }
 
-    // MongoDB Verbindung
     await connectDB();
     console.log("✅ MongoDB verbunden");
 
-    // Server starten
     app.listen(PORT, () => {
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       console.log(`✅ Server läuft auf Port ${PORT}`);
-      console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:5173"}`);
-      console.log(`🔐 Better Auth: http://localhost:${PORT}/api/auth/`);
-      console.log(`💚 Health Check: http://localhost:${PORT}/api/health`);
+      console.log(
+        `🌐 Frontend URL: ${
+          process.env.FRONTEND_URL || "http://localhost:5173"
+        }`
+      );
+      console.log(`🔐 Better Auth: /api/auth/*`);
+      console.log(`💚 Health Check: /api/health`);
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     });
   } catch (error) {
