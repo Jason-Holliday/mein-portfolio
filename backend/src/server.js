@@ -32,7 +32,7 @@ app.use(
 );
 
 // === BETTER AUTH ROUTES ===
-app.all("/api/auth/*", async (req, res) => {
+app.use("/api/auth", async (req, res) => {
   try {
     const baseURL = process.env.BETTER_AUTH_URL || `http://localhost:${PORT}`;
     const url = new URL(req.originalUrl || req.url, baseURL);
@@ -55,21 +55,15 @@ app.all("/api/auth/*", async (req, res) => {
       body: body,
     });
 
-    // Better Auth Handler aufrufen
     const webResponse = await auth.handler(webRequest);
-    
-    // Response Status setzen
     res.status(webResponse.status);
     
-    // Response Headers kopieren
     webResponse.headers.forEach((value, key) => {
       res.setHeader(key, value);
     });
     
-    // Response Body senden
     const responseBody = await webResponse.text();
     
-    // JSON parsen, sonst als Text senden
     try {
       const jsonBody = JSON.parse(responseBody);
       res.json(jsonBody);
@@ -84,7 +78,6 @@ app.all("/api/auth/*", async (req, res) => {
     });
   }
 });
-
 // === SESSION ENDPOINT ===
 app.get("/api/me", async (req, res) => {
   try {
