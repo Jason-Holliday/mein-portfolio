@@ -13,10 +13,6 @@ import { auth } from "./betterAuth/auth.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// === MIDDLEWARE ===
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
 app.use(
   cors({
     origin: [
@@ -30,6 +26,12 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+app.options('*', cors());
+
+// === MIDDLEWARE ===
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // =======================================================
 // 🔐 BETTER AUTH (Coolify-sicher, ohne Wildcard)
