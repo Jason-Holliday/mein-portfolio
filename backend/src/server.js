@@ -13,6 +13,7 @@ import { auth } from "./betterAuth/auth.js";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// === CORS (MUSS GANZ AM ANFANG SEIN!) ===
 app.use(
   cors({
     origin: [
@@ -32,13 +33,22 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // =======================================================
-// 🔐 BETTER AUTH (Coolify-sicher, ohne Wildcard)
+// 💚 HEALTH CHECK (ganz oben, damit es immer funktioniert)
+// =======================================================
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "Backend läuft",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// =======================================================
+// 🔐 BETTER AUTH
 // =======================================================
 app.use("/api/auth", async (req, res) => {
   try {
-    const baseURL =
-      process.env.BETTER_AUTH_URL || `http://localhost:${PORT}`;
-
+    const baseURL = process.env.BETTER_AUTH_URL || `http://localhost:${PORT}`;
     const url = new URL(req.originalUrl, baseURL);
 
     const headers = new Headers();
@@ -59,7 +69,6 @@ app.use("/api/auth", async (req, res) => {
     });
 
     const webResponse = await auth.handler(webRequest);
-
     res.status(webResponse.status);
 
     webResponse.headers.forEach((value, key) => {
@@ -106,37 +115,6 @@ app.use("/api/projects", projectsRoutes);
 app.use("/api", contactRoutes);
 
 // =======================================================
-// 💚 HEALTH CHECK
-// =======================================================
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "Backend läuft",
-    timestamp: new Date().toISOString(),
-  });
-});
-
-// =======================================================
-// 🚫 API 404 (NUR für /api)
-// =======================================================
-app.use("/api", (req, res) => {
-  res.status(404).json({
-    error: "API Route nicht gefunden",
-    path: req.path,
-  });
-});
-
-// =======================================================
-// 🌍 GLOBAL 404 (optional, aber sauber)
-// =======================================================
-app.use((req, res) => {
-  res.status(404).json({
-    error: "Route nicht gefunden",
-    path: req.path,
-  });
-});
-
-// =======================================================
 // 💥 GLOBAL ERROR HANDLER
 // =======================================================
 app.use((err, req, res, next) => {
@@ -144,6 +122,16 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({
     message: err.message || "Internal server error",
     error: process.env.NODE_ENV === "development" ? err.stack : undefined,
+  });
+});
+
+// =======================================================
+// 🚫 404 HANDLER (MUSS GANZ AM ENDE SEIN!)
+// =======================================================
+app.use((req, res) => {
+  res.status(404).json({
+    error: "Route nicht gefunden",
+    path: req.path,
   });
 });
 
