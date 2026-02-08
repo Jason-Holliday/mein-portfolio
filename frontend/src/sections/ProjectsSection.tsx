@@ -22,16 +22,20 @@ const ProjectsPage = () => {
 
   const indexOfLastProject = currentPage * projectsPerPage;
   const indexOfFirstProject = indexOfLastProject - projectsPerPage;
-  const currentProjects = projects.slice(indexOfFirstProject, indexOfLastProject);
+  const currentProjects = Array.isArray(projects)
+    ? projects.slice(indexOfFirstProject, indexOfLastProject)
+    : [];
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const res = await api.get<Project[]>("/projects/public");
-        setProjects(res.data);
+        const data = Array.isArray(res.data) ? res.data : [];
+        setProjects(data);
       } catch (error) {
         console.error(error);
         toast.error("Projekte konnten nicht geladen werden");
+        setProjects([]);
       } finally {
         setLoading(false);
       }
@@ -53,9 +57,13 @@ const ProjectsPage = () => {
         </h1>
 
         {loading ? (
-          <div className="text-center py-10 text-textSecondary">Lade Projekte...</div>
+          <div className="text-center py-10 text-textSecondary">
+            Lade Projekte...
+          </div>
         ) : projects.length === 0 ? (
-          <div className="text-center py-10 text-textSecondary">Keine Projekte gefunden.</div>
+          <div className="text-center py-10 text-textSecondary">
+            Keine Projekte gefunden.
+          </div>
         ) : (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
