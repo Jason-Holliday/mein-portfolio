@@ -28,6 +28,8 @@ app.use(
   })
 );
 
+app.options("*", cors());
+
 // === MIDDLEWARE ===
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
